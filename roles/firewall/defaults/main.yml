@@ -1,0 +1,10 @@
+---
+firewall_trusted_interfaces:
+  - tailscale0      # Tailscale tunnel: only your own machines (Part 3)
+  - br10            # VXLAN segment bridges: no host IP, bridged VM traffic only (Part 3.1, br_netfilter)
+  - br20
+firewall_forbidden_on_public:   # must never be open on the Wi-Fi zone
+  - nfs
+  - mountd
+  - rpc-bind
+  - iscsi-target

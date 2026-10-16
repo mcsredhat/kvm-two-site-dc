@@ -1,0 +1,21 @@
+---
+- name: Put the lab interfaces in the trusted zone (permanent and now)
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ firewall_trusted_interfaces }}"
+
+- name: Read the services open on the default (Wi-Fi) zone
+  ansible.builtin.command: firewall-cmd --list-services
+  register: firewall_public_services
+  changed_when: false
+
+- name: Check that no storage service is open on the Wi-Fi zone
+  ansible.builtin.assert:
+    that: item not in firewall_public_services.stdout.split()
+    fail_msg: "{{ item }} is open on the default zone: storage must only be reachable through tailscale0"
+    quiet: true
+  loop: "{{ firewall_forbidden_on_public }}"
