@@ -1,0 +1,12 @@
+all:
+  children:
+    hypervisors:
+      hosts:
+        kvm1:
+          ansible_connection: local      # Ansible runs ON kvm1
+          tailscale_ip: 100.106.156.103
+          site: work
+        kvm2:
+          ansible_host: kvm2             # reached through Tailscale (MagicDNS)
+          tailscale_ip: 100.108.161.47
+          site: home
