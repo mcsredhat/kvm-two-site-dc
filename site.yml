@@ -1,0 +1,6 @@
+---
+- name: Two-site KVM lab (Level 6)
+  hosts: hypervisors
+  become: true
+  roles:
+    - base

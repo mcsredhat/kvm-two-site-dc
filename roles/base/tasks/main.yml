@@ -1,0 +1,40 @@
+---
+- name: Install the base packages
+  ansible.builtin.dnf:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Never sleep or suspend (unattended hypervisor)
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    masked: true
+  loop: "{{ base_sleep_targets }}"
+
+- name: Ignore the laptop lid
+  ansible.builtin.copy:
+    dest: /etc/systemd/logind.conf.d/90-lid.conf
+    content: |
+      [Login]
+      HandleLidSwitch=ignore
+      HandleLidSwitchExternalPower=ignore
+      HandleLidSwitchDocked=ignore
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart logind
+
+- name: Time sync and firewall running
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: [chronyd, tuned, firewalld]
+
+- name: Read the active tuned profile
+  ansible.builtin.command: tuned-adm active
+  register: base_tuned_active
+  changed_when: false
+
+- name: Set the tuned profile
+  ansible.builtin.command: tuned-adm profile {{ base_tuned_profile }}
+  when: base_tuned_profile not in base_tuned_active.stdout
