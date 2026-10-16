@@ -1,0 +1,13 @@
+[Unit]
+Description=Lab VXLAN segments over Tailscale
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/vxlan-lab.sh up
+ExecStop=/usr/local/sbin/vxlan-lab.sh down
+
+[Install]
+WantedBy=multi-user.target

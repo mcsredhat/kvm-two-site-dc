@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+# NOT "restart vxlan-lab": its ExecStop deletes the bridges, which would cut the running VMs off.
+# "up" only creates what is missing.
+- name: Apply VXLAN
+  ansible.builtin.command: /usr/local/sbin/vxlan-lab.sh up

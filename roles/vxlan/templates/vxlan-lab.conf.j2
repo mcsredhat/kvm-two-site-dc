@@ -1,0 +1,4 @@
+{% set peer = groups['hypervisors'] | difference([inventory_hostname]) | first %}
+PEER={{ hostvars[peer].tailscale_ip }}
+VNIS="{{ vxlan_vnis | join(' ') }}"
+MTU={{ vxlan_mtu }}

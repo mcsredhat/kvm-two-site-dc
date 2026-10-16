@@ -1,0 +1,84 @@
+---
+- name: Tailscale must be running (VXLAN travels inside it)
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: VXLAN configuration (peer computed from the inventory)
+  ansible.builtin.template:
+    src: vxlan-lab.conf.j2
+    dest: /etc/vxlan-lab.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply VXLAN
+
+- name: VXLAN script
+  ansible.builtin.copy:
+    src: vxlan-lab.sh
+    dest: /usr/local/sbin/vxlan-lab.sh
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Apply VXLAN
+
+- name: VXLAN systemd unit
+  ansible.builtin.copy:
+    src: vxlan-lab.service
+    dest: /etc/systemd/system/vxlan-lab.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Drop-in folders for the boot order
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d"
+    state: directory
+    mode: "0755"
+  loop: [virtqemud, virtstoraged]
+
+- name: Boot order - VMs start after the VXLAN bridges exist
+  ansible.builtin.copy:
+    src: virtqemud-10-after-vxlan.conf
+    dest: /etc/systemd/system/virtqemud.service.d/10-after-vxlan.conf
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Boot order - storage pools start after network, Tailscale, NFS and iSCSI
+  ansible.builtin.copy:
+    src: virtstoraged-10-after-network.conf
+    dest: /etc/systemd/system/virtstoraged.service.d/10-after-network.conf
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Apply pending systemd reloads before enabling the unit
+  ansible.builtin.meta: flush_handlers
+
+- name: VXLAN service enabled and active
+  ansible.builtin.systemd:
+    name: vxlan-lab
+    enabled: true
+    state: started
+
+- name: Read each VXLAN interface
+  ansible.builtin.command: ip -d link show vxlan{{ item }}
+  register: vxlan_links
+  changed_when: false
+  check_mode: false
+  loop: "{{ vxlan_vnis }}"
+
+- name: Check MTU and peer of each VXLAN interface
+  vars:
+    peer: "{{ groups['hypervisors'] | difference([inventory_hostname]) | first }}"
+  ansible.builtin.assert:
+    that:
+      - "'mtu ' ~ vxlan_mtu in item.stdout"
+      - "'remote ' ~ hostvars[peer].tailscale_ip in item.stdout"
+      - "'master br' ~ item.item in item.stdout"
+    fail_msg: "vxlan{{ item.item }} is not as designed: {{ item.stdout | default('no output') }}"
+    quiet: true
+  loop: "{{ vxlan_links.results }}"
+  loop_control:
+    label: "vxlan{{ item.item }}"

@@ -12,6 +12,7 @@
   ansible.builtin.command: firewall-cmd --list-services
   register: firewall_public_services
   changed_when: false
+  check_mode: false
 
 - name: Check that no storage service is open on the Wi-Fi zone
   ansible.builtin.assert:
