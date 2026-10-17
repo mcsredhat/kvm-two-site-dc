@@ -37,6 +37,7 @@
   check_mode: false
 
 - name: Set the tuned profile
-  ansible.builtin.command: tuned-adm profile {{ base_tuned_profile }}
+  ansible.builtin.command: "{{ 'true' if ansible_check_mode else 'tuned-adm profile ' ~ base_tuned_profile }}"
+  check_mode: false     # in --check run 'true': report the drift, change nothing
   when: base_tuned_profile not in base_tuned_active.stdout
   changed_when: true
