@@ -28,3 +28,4 @@
     fail_msg: "{{ item }} is open on the default zone: storage must only be reachable through tailscale0"
     quiet: true
   loop: "{{ firewall_forbidden_on_public }}"
+  when: not ansible_check_mode     # the close task above is not applied in --check

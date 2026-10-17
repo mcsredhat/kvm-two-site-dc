@@ -128,3 +128,8 @@
   register: vxlan_replug
   changed_when: vxlan_replug.stdout | length > 0
   check_mode: false
+
+- name: Show the re-plugged VM ports
+  ansible.builtin.debug:
+    var: vxlan_replug.stdout_lines
+  when: vxlan_replug.stdout | length > 0
