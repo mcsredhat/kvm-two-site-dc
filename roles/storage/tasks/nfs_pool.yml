@@ -10,23 +10,24 @@
     state: true
     persistent: true
 
-- name: Mount point (same path on both hosts - needed for migration)
+# no mode: when the pool is active this path IS the NFS export root; a mode would change it on kvm2
+- name: Mount point (same path on both hosts - needed for migration)  # noqa: risky-file-permissions
   ansible.builtin.file:
-    path: "{{ nfs_pool_target }}"
+    path: "{{ storage_nfs_pool_target }}"
     state: directory
 
 - name: Define the NFS pool (only if it does not exist)
   community.libvirt.virt_pool:
     command: define
-    name: "{{ nfs_pool_name }}"
+    name: "{{ storage_nfs_pool_name }}"
     xml: "{{ lookup('ansible.builtin.template', 'nfspool.xml.j2') }}"
 
 - name: NFS pool started
   community.libvirt.virt_pool:
-    name: "{{ nfs_pool_name }}"
+    name: "{{ storage_nfs_pool_name }}"
     state: active
 
 - name: NFS pool starts at boot
   community.libvirt.virt_pool:
-    name: "{{ nfs_pool_name }}"
+    name: "{{ storage_nfs_pool_name }}"
     autostart: true

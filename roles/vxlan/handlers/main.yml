@@ -7,3 +7,4 @@
 # "up" only creates what is missing.
 - name: Apply VXLAN
   ansible.builtin.command: /usr/local/sbin/vxlan-lab.sh up
+  changed_when: true

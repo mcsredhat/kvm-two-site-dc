@@ -6,7 +6,7 @@
 
 - name: Folder for the backing files
   ansible.builtin.file:
-    path: "{{ iscsi_backing_file | dirname }}"
+    path: "{{ storage_iscsi_backing_file | dirname }}"
     state: directory
     mode: "0700"
 
@@ -24,24 +24,28 @@
 
 - name: Backstore (the file that holds the LUN data)
   ansible.builtin.command: >-
-    targetcli /backstores/fileio create {{ iscsi_backstore }} {{ iscsi_backing_file }} {{ iscsi_lun_size }}
-  when: "' ' ~ iscsi_backstore ~ ' ' not in tcli.stdout"
+    targetcli /backstores/fileio create {{ storage_iscsi_backstore }} {{ storage_iscsi_backing_file }} {{ storage_iscsi_lun_size }}
+  when: "' ' ~ storage_iscsi_backstore ~ ' ' not in tcli.stdout"
   notify: Save target config
+  changed_when: true
 
 - name: Target IQN
-  ansible.builtin.command: targetcli /iscsi create {{ iscsi_target_iqn }}
-  when: iscsi_target_iqn not in tcli.stdout
+  ansible.builtin.command: targetcli /iscsi create {{ storage_iscsi_target_iqn }}
+  when: storage_iscsi_target_iqn not in tcli.stdout
   notify: Save target config
+  changed_when: true
 
 - name: LUN (the backstore exported by the target)
   ansible.builtin.command: >-
-    targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/luns create /backstores/fileio/{{ iscsi_backstore }}
+    targetcli /iscsi/{{ storage_iscsi_target_iqn }}/tpg1/luns create /backstores/fileio/{{ storage_iscsi_backstore }}
   when: "'lun0' not in tcli.stdout"
   notify: Save target config
+  changed_when: true
 
 - name: ACL - one per allowed initiator
   ansible.builtin.command: >-
-    targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/acls create {{ iscsi_iqn_prefix }}:{{ item }}
-  loop: "{{ iscsi_initiators }}"
-  when: (iscsi_iqn_prefix ~ ':' ~ item) not in tcli.stdout
+    targetcli /iscsi/{{ storage_iscsi_target_iqn }}/tpg1/acls create {{ storage_iscsi_iqn_prefix }}:{{ item }}
+  loop: "{{ storage_iscsi_initiators }}"
+  when: (storage_iscsi_iqn_prefix ~ ':' ~ item) not in tcli.stdout
   notify: Save target config
+  changed_when: true

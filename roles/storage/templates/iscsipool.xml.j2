@@ -1,8 +1,8 @@
 <pool type='iscsi'>
-  <name>{{ iscsi_pool_name }}</name>
+  <name>{{ storage_iscsi_pool_name }}</name>
   <source>
     <host name='{{ storage_server_ip }}'/>
-    <device path='{{ iscsi_target_iqn }}'/>
+    <device path='{{ storage_iscsi_target_iqn }}'/>
   </source>
   <target>
     <path>/dev/disk/by-path</path>

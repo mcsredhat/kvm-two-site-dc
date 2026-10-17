@@ -2,14 +2,14 @@
 storage_server: kvm2                                  # serves NFS and iSCSI
 storage_server_ip: "{{ hostvars[storage_server].tailscale_ip }}"
 
-nfs_export_path: /export/vms
-nfs_pool_name: nfspool
-nfs_pool_target: /var/lib/libvirt/images/nfs
+storage_nfs_export_path: /export/vms
+storage_nfs_pool_name: nfspool
+storage_nfs_pool_target: /var/lib/libvirt/images/nfs
 
-iscsi_iqn_prefix: iqn.2026-10.lab.local
-iscsi_target_iqn: "{{ iscsi_iqn_prefix }}:storage1"
-iscsi_backstore: disk1
-iscsi_backing_file: /var/lib/iscsi_disks/disk1.img
-iscsi_lun_size: 1G
-iscsi_initiators: [kvm1]                              # hosts allowed by the ACL, each gets an iscsipool
-iscsi_pool_name: iscsipool
+storage_iscsi_iqn_prefix: iqn.2026-10.lab.local
+storage_iscsi_target_iqn: "{{ storage_iscsi_iqn_prefix }}:storage1"
+storage_iscsi_backstore: disk1
+storage_iscsi_backing_file: /var/lib/iscsi_disks/disk1.img
+storage_iscsi_lun_size: 1G
+storage_iscsi_initiators: [kvm1]                              # hosts allowed by the ACL, each gets an iscsipool
+storage_iscsi_pool_name: iscsipool

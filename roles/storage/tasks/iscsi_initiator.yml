@@ -6,12 +6,12 @@
 
 - name: Initiator name (must match the ACL on the target)
   ansible.builtin.copy:
-    content: "InitiatorName={{ iscsi_iqn_prefix }}:{{ inventory_hostname }}\n"
+    content: "InitiatorName={{ storage_iscsi_iqn_prefix }}:{{ inventory_hostname }}\n"
     dest: /etc/iscsi/initiatorname.iscsi
     mode: "0644"
   notify: Restart iscsid
 
-- name: iscsid running
+- name: Service iscsid running
   ansible.builtin.systemd:
     name: iscsid
     enabled: true
@@ -29,36 +29,38 @@
 
 - name: Discover the target (only if unknown)
   ansible.builtin.command: iscsiadm -m discovery -t sendtargets -p {{ storage_server_ip }}
-  when: iscsi_target_iqn not in nodes.stdout
+  when: storage_iscsi_target_iqn not in nodes.stdout
+  changed_when: true
 
 - name: Read the node startup mode
   ansible.builtin.command: >-
-    iscsiadm -m node -T {{ iscsi_target_iqn }} -p {{ storage_server_ip }} -o show
+    iscsiadm -m node -T {{ storage_iscsi_target_iqn }} -p {{ storage_server_ip }} -o show
   register: node_cfg
   changed_when: false
   check_mode: false
-  when: not ansible_check_mode or iscsi_target_iqn in nodes.stdout
+  when: not ansible_check_mode or storage_iscsi_target_iqn in nodes.stdout
 
 - name: Only libvirt logs in (node.startup = manual, avoids the boot race)
   ansible.builtin.command: >-
-    iscsiadm -m node -T {{ iscsi_target_iqn }} -p {{ storage_server_ip }}
+    iscsiadm -m node -T {{ storage_iscsi_target_iqn }} -p {{ storage_server_ip }}
     --op update -n node.startup -v manual
   when:
     - node_cfg.stdout is defined
     - "'node.startup = manual' not in node_cfg.stdout"
+  changed_when: true
 
 - name: Define the iSCSI pool (only if it does not exist)
   community.libvirt.virt_pool:
     command: define
-    name: "{{ iscsi_pool_name }}"
+    name: "{{ storage_iscsi_pool_name }}"
     xml: "{{ lookup('ansible.builtin.template', 'iscsipool.xml.j2') }}"
 
-- name: iSCSI pool started
+- name: Storage - iSCSI pool started
   community.libvirt.virt_pool:
-    name: "{{ iscsi_pool_name }}"
+    name: "{{ storage_iscsi_pool_name }}"
     state: active
 
-- name: iSCSI pool starts at boot
+- name: Storage - iSCSI pool starts at boot
   community.libvirt.virt_pool:
-    name: "{{ iscsi_pool_name }}"
+    name: "{{ storage_iscsi_pool_name }}"
     autostart: true

@@ -6,7 +6,8 @@
 
 - name: Export directory
   ansible.builtin.file:
-    path: "{{ nfs_export_path }}"
+    path: "{{ storage_nfs_export_path }}"
+    mode: "0755"
     state: directory
 
 - name: Export only to the tailnet addresses of the hypervisors
