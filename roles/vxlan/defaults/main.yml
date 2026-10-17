@@ -1,3 +1,4 @@
 ---
 vxlan_vnis: [10, 20]        # one VXLAN segment (and one bridge brNN) per VNI
 vxlan_mtu: 1230             # Tailscale 1280 - VXLAN overhead 50
+vxlan_peer_ip: "{{ hostvars[groups['hypervisors'] | difference([inventory_hostname]) | first].tailscale_ip }}"

@@ -8,6 +8,14 @@
     state: enabled
   loop: "{{ firewall_trusted_interfaces }}"
 
+- name: Close the storage services on the default (Wi-Fi) zone (permanent and now)
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    state: disabled
+    permanent: true
+    immediate: true
+  loop: "{{ firewall_forbidden_on_public }}"
+
 - name: Read the services open on the default (Wi-Fi) zone
   ansible.builtin.command: firewall-cmd --list-services
   register: firewall_public_services

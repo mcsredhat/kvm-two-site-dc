@@ -23,6 +23,14 @@
     mode: "0755"
   notify: Apply VXLAN
 
+- name: VM port re-plug script
+  ansible.builtin.copy:
+    src: vxlan-replug.sh
+    dest: /usr/local/sbin/vxlan-replug.sh
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: VXLAN systemd unit
   ansible.builtin.copy:
     src: vxlan-lab.service
@@ -53,7 +61,7 @@
     mode: "0644"
   notify: Reload systemd
 
-- name: Apply pending systemd reloads before enabling the unit
+- name: Apply pending systemd reloads and file changes now
   ansible.builtin.meta: flush_handlers
 
 - name: VXLAN service enabled and active
@@ -62,23 +70,61 @@
     enabled: true
     state: started
 
-- name: Read each VXLAN interface
+# ---- runtime state: files can be right while the live interfaces are wrong ----
+- name: Read each VXLAN interface (live state)
   ansible.builtin.command: ip -d link show vxlan{{ item }}
   register: vxlan_links
   changed_when: false
+  failed_when: false
   check_mode: false
   loop: "{{ vxlan_vnis }}"
 
-- name: Check MTU and peer of each VXLAN interface
-  vars:
-    peer: "{{ groups['hypervisors'] | difference([inventory_hostname]) | first }}"
-  ansible.builtin.assert:
-    that:
-      - "'mtu ' ~ vxlan_mtu in item.stdout"
-      - "'remote ' ~ hostvars[peer].tailscale_ip in item.stdout"
-      - "'master br' ~ item.item in item.stdout"
-    fail_msg: "vxlan{{ item.item }} is not as designed: {{ item.stdout | default('no output') }}"
-    quiet: true
+- name: List the VNIs whose live state differs from the design
+  ansible.builtin.set_fact:
+    vxlan_bad_vnis: "{{ (vxlan_bad_vnis | default([])) + [item.item] }}"
+  when: >-
+    item.rc != 0
+    or ('mtu ' ~ vxlan_mtu) not in item.stdout
+    or ('remote ' ~ vxlan_peer_ip) not in item.stdout
+    or ('master br' ~ item.item) not in item.stdout
   loop: "{{ vxlan_links.results }}"
   loop_control:
     label: "vxlan{{ item.item }}"
+
+- name: Report live drift (shows as changed, also in --check)
+  ansible.builtin.debug:
+    msg: "live drift on: vxlan{{ vxlan_bad_vnis | join(', vxlan') }}"
+  changed_when: true
+  when: vxlan_bad_vnis | default([]) | length > 0
+
+- name: Repair the live VXLAN state (up recreates missing parts, resets MTU and bridge)
+  ansible.builtin.command: /usr/local/sbin/vxlan-lab.sh up
+  changed_when: true
+  when: vxlan_bad_vnis | default([]) | length > 0
+
+- name: Read each VXLAN interface again
+  ansible.builtin.command: ip -d link show vxlan{{ item }}
+  register: vxlan_links_after
+  changed_when: false
+  check_mode: false
+  loop: "{{ vxlan_vnis }}"
+  when: not ansible_check_mode
+
+- name: Check MTU, peer and bridge of each VXLAN interface
+  ansible.builtin.assert:
+    that:
+      - "('mtu ' ~ vxlan_mtu) in item.stdout"
+      - "('remote ' ~ vxlan_peer_ip) in item.stdout"
+      - "('master br' ~ item.item) in item.stdout"
+    fail_msg: "vxlan{{ item.item }} is not as designed: {{ item.stdout | default('no output') }}"
+    quiet: true
+  loop: "{{ vxlan_links_after.results }}"
+  loop_control:
+    label: "vxlan{{ item.item }}"
+  when: not ansible_check_mode
+
+- name: Re-plug running VMs' ports into their bridge
+  ansible.builtin.command: /usr/local/sbin/vxlan-replug.sh {{ '--dry-run' if ansible_check_mode else '' }}
+  register: vxlan_replug
+  changed_when: vxlan_replug.stdout | length > 0
+  check_mode: false
