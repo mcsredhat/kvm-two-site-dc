@@ -1,0 +1,18 @@
+---
+- name: NFS server
+  ansible.builtin.include_tasks: nfs_server.yml
+  when: inventory_hostname == storage_server
+
+- name: iSCSI target
+  ansible.builtin.include_tasks: iscsi_target.yml
+  when: inventory_hostname == storage_server
+
+- name: Make the exports and target live before the clients use them
+  ansible.builtin.meta: flush_handlers
+
+- name: NFS pool (both hosts)
+  ansible.builtin.include_tasks: nfs_pool.yml
+
+- name: iSCSI initiator and pool
+  ansible.builtin.include_tasks: iscsi_initiator.yml
+  when: inventory_hostname in iscsi_initiators

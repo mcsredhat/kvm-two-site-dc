@@ -1,0 +1,47 @@
+---
+- name: Target packages
+  ansible.builtin.dnf:
+    name: targetcli
+    state: present
+
+- name: Folder for the backing files
+  ansible.builtin.file:
+    path: "{{ iscsi_backing_file | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: Target service enabled (restores the saved config at boot)
+  ansible.builtin.systemd:
+    name: target
+    enabled: true
+    state: started
+
+- name: Read the current target tree
+  ansible.builtin.command: targetcli ls /
+  register: tcli
+  changed_when: false
+  check_mode: false
+
+- name: Backstore (the file that holds the LUN data)
+  ansible.builtin.command: >-
+    targetcli /backstores/fileio create {{ iscsi_backstore }} {{ iscsi_backing_file }} {{ iscsi_lun_size }}
+  when: "' ' ~ iscsi_backstore ~ ' ' not in tcli.stdout"
+  notify: Save target config
+
+- name: Target IQN
+  ansible.builtin.command: targetcli /iscsi create {{ iscsi_target_iqn }}
+  when: iscsi_target_iqn not in tcli.stdout
+  notify: Save target config
+
+- name: LUN (the backstore exported by the target)
+  ansible.builtin.command: >-
+    targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/luns create /backstores/fileio/{{ iscsi_backstore }}
+  when: "'lun0' not in tcli.stdout"
+  notify: Save target config
+
+- name: ACL - one per allowed initiator
+  ansible.builtin.command: >-
+    targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/acls create {{ iscsi_iqn_prefix }}:{{ item }}
+  loop: "{{ iscsi_initiators }}"
+  when: (iscsi_iqn_prefix ~ ':' ~ item) not in tcli.stdout
+  notify: Save target config

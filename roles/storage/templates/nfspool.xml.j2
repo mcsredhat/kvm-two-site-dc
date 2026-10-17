@@ -1,0 +1,11 @@
+<pool type='netfs'>
+  <name>{{ nfs_pool_name }}</name>
+  <source>
+    <host name='{{ storage_server_ip }}'/>
+    <dir path='{{ nfs_export_path }}'/>
+    <format type='nfs'/>
+  </source>
+  <target>
+    <path>{{ nfs_pool_target }}</path>
+  </target>
+</pool>

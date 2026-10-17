@@ -1,0 +1,23 @@
+---
+- name: NFS server package
+  ansible.builtin.dnf:
+    name: nfs-utils
+    state: present
+
+- name: Export directory
+  ansible.builtin.file:
+    path: "{{ nfs_export_path }}"
+    state: directory
+
+- name: Export only to the tailnet addresses of the hypervisors
+  ansible.builtin.template:
+    src: vms.exports.j2
+    dest: /etc/exports.d/vms.exports
+    mode: "0644"
+  notify: Re-export NFS
+
+- name: NFS server running
+  ansible.builtin.systemd:
+    name: nfs-server
+    enabled: true
+    state: started

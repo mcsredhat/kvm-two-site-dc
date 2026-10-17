@@ -1,0 +1,32 @@
+---
+- name: NFS client and SELinux tools
+  ansible.builtin.dnf:
+    name: [nfs-utils, python3-libsemanage]
+    state: present
+
+- name: Let QEMU use NFS-backed images (SELinux)
+  ansible.posix.seboolean:
+    name: virt_use_nfs
+    state: true
+    persistent: true
+
+- name: Mount point (same path on both hosts - needed for migration)
+  ansible.builtin.file:
+    path: "{{ nfs_pool_target }}"
+    state: directory
+
+- name: Define the NFS pool (only if it does not exist)
+  community.libvirt.virt_pool:
+    command: define
+    name: "{{ nfs_pool_name }}"
+    xml: "{{ lookup('ansible.builtin.template', 'nfspool.xml.j2') }}"
+
+- name: NFS pool started
+  community.libvirt.virt_pool:
+    name: "{{ nfs_pool_name }}"
+    state: active
+
+- name: NFS pool starts at boot
+  community.libvirt.virt_pool:
+    name: "{{ nfs_pool_name }}"
+    autostart: true

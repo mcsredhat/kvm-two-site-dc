@@ -1,0 +1,11 @@
+---
+- name: Re-export NFS
+  ansible.builtin.command: exportfs -ra
+
+- name: Save target config
+  ansible.builtin.command: targetcli saveconfig
+
+- name: Restart iscsid
+  ansible.builtin.systemd:
+    name: iscsid
+    state: restarted
