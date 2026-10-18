@@ -32,3 +32,5 @@ Per-host sudo passwords live in `host_vars/<host>/vault.yml` (Ansible Vault, AES
 See [docs/findings.md](docs/findings.md): every error met while building this, its cause and its fix.
 
 Author: FARAJ — RHCSA/RHCE, Linux sysadmin → DevOps. Part of a KVM course (Levels 1–8) on RHEL 9.
+
+Part of the KVM course: https://github.com/mcsredhat/kvm-course (Levels 1–7).
