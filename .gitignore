@@ -1,1 +1,9 @@
 tests/last-run.log
+*.img
+*.iso
+*.qcow2
+*secret*.xml
+*.pem
+*.key
+*.tar.gz
+node_exporter-*/
