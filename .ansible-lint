@@ -1,0 +1,4 @@
+---
+exclude_paths:
+  - host_vars/          # vault-encrypted: CI has no vault password
+  - tests/last-run.log
